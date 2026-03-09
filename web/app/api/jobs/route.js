@@ -125,3 +125,24 @@ export async function PUT(request) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export async function DELETE(request) {
+  try {
+    const auth = await getAuthUser(request);
+    if (!auth) return unauthorizedResponse();
+
+    const { ids } = await request.json();
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return NextResponse.json({ error: 'ids array is required' }, { status: 400 });
+    }
+
+    await prisma.job.deleteMany({
+      where: { id: { in: ids } },
+    });
+
+    return NextResponse.json({ message: `Deleted ${ids.length} job(s)` });
+  } catch (error) {
+    console.error('DELETE jobs error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

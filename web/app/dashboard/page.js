@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+
+const PER_PAGE = 20;
 
 function getBadgeClass(status) {
   if (!status) return 'badge';
@@ -32,6 +34,12 @@ export default function JobsPage() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState(new Set());
+  const [deleting, setDeleting] = useState(false);
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('applied_at');
+  const [sortDir, setSortDir] = useState('desc');
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     fetch('/api/applicants')
@@ -52,7 +60,121 @@ export default function JobsPage() {
       .then((data) => setJobs(data.jobs || []))
       .catch(() => {})
       .finally(() => setLoading(false));
+    setSelected(new Set());
+    setPage(1);
   }, [applicantId, dateFrom, dateTo]);
+
+  // Filter by search
+  const filtered = useMemo(() => {
+    if (!search.trim()) return jobs;
+    const q = search.toLowerCase();
+    return jobs.filter(
+      (j) =>
+        (j.title || '').toLowerCase().includes(q) ||
+        (j.site || '').toLowerCase().includes(q)
+    );
+  }, [jobs, search]);
+
+  // Sort
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      let valA, valB;
+      switch (sortBy) {
+        case 'title':
+          valA = (a.title || '').toLowerCase();
+          valB = (b.title || '').toLowerCase();
+          return sortDir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        case 'match_percent':
+          valA = a.match_percent ?? -1;
+          valB = b.match_percent ?? -1;
+          return sortDir === 'asc' ? valA - valB : valB - valA;
+        case 'apply_status':
+          valA = (a.apply_status || '').toLowerCase();
+          valB = (b.apply_status || '').toLowerCase();
+          return sortDir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        case 'applied_at':
+        default:
+          valA = a.applied_at ? new Date(a.applied_at).getTime() : 0;
+          valB = b.applied_at ? new Date(b.applied_at).getTime() : 0;
+          return sortDir === 'asc' ? valA - valB : valB - valA;
+      }
+    });
+    return arr;
+  }, [filtered, sortBy, sortDir]);
+
+  // Paginate
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PER_PAGE));
+  const paged = sorted.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+
+  // Reset page when search/sort changes
+  useEffect(() => {
+    setPage(1);
+    setSelected(new Set());
+  }, [search, sortBy, sortDir]);
+
+  function handleSort(col) {
+    if (sortBy === col) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(col);
+      setSortDir(col === 'title' || col === 'apply_status' ? 'asc' : 'desc');
+    }
+  }
+
+  function sortIcon(col) {
+    if (sortBy !== col) return ' ↕';
+    return sortDir === 'asc' ? ' ↑' : ' ↓';
+  }
+
+  function toggleSelect(id) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAll() {
+    const pageIds = paged.map((j) => j.id);
+    const allSelected = pageIds.every((id) => selected.has(id));
+    if (allSelected) {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        pageIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    } else {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        pageIds.forEach((id) => next.add(id));
+        return next;
+      });
+    }
+  }
+
+  async function handleDeleteSelected() {
+    if (selected.size === 0) return;
+    if (!confirm(`Delete ${selected.size} job(s)?`)) return;
+    setDeleting(true);
+    try {
+      const res = await fetch('/api/jobs', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selected) }),
+      });
+      if (!res.ok) throw new Error('Failed to delete');
+      setJobs((prev) => prev.filter((j) => !selected.has(j.id)));
+      setSelected(new Set());
+    } catch {
+      alert('Failed to delete jobs');
+    }
+    setDeleting(false);
+  }
+
+  const pageIds = paged.map((j) => j.id);
+  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
 
   return (
     <div>
@@ -67,6 +189,15 @@ export default function JobsPage() {
               </option>
             ))}
           </select>
+        </div>
+        <div className="form-group">
+          <label>Search</label>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by title or site..."
+          />
         </div>
         <div className="form-group">
           <label>From</label>
@@ -84,86 +215,146 @@ export default function JobsPage() {
           <span>Loading jobs...</span>
         </div>
       ) : (
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Site</th>
-                  <th>Title</th>
-                  <th>Summary</th>
-                  <th>Skills</th>
-                  <th>Match</th>
-                  <th>Interview</th>
-                  <th>Status</th>
-                  <th>Applied</th>
-                </tr>
-              </thead>
-              <tbody>
-                {jobs.length === 0 ? (
+        <>
+          {selected.size > 0 && (
+            <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                {selected.size} selected
+              </span>
+              <button
+                className="btn-danger btn-sm"
+                onClick={handleDeleteSelected}
+                disabled={deleting}
+              >
+                {deleting ? 'Deleting...' : 'Delete Selected'}
+              </button>
+            </div>
+          )}
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div className="table-wrapper">
+              <table>
+                <thead>
                   <tr>
-                    <td colSpan={8} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
-                      No jobs found
-                    </td>
+                    <th style={{ width: 36 }}>
+                      <input
+                        type="checkbox"
+                        checked={allPageSelected}
+                        onChange={toggleAll}
+                      />
+                    </th>
+                    <th>Site</th>
+                    <th className="sortable-th" onClick={() => handleSort('title')}>
+                      Title{sortIcon('title')}
+                    </th>
+                    <th>Summary</th>
+                    <th>Skills</th>
+                    <th className="sortable-th" onClick={() => handleSort('match_percent')}>
+                      Match{sortIcon('match_percent')}
+                    </th>
+                    <th>Interview</th>
+                    <th className="sortable-th" onClick={() => handleSort('apply_status')}>
+                      Status{sortIcon('apply_status')}
+                    </th>
+                    <th className="sortable-th" onClick={() => handleSort('applied_at')}>
+                      Applied{sortIcon('applied_at')}
+                    </th>
                   </tr>
-                ) : (
-                  jobs.map((job) => (
-                    <tr key={job.id}>
-                      <td>
-                        {job.site_url && (
-                          <img
-                            className="site-favicon"
-                            src={`https://www.google.com/s2/favicons?domain=${new URL(job.site_url).hostname}&sz=32`}
-                            alt=""
-                          />
-                        )}
-                        {job.site || '-'}
-                      </td>
-                      <td>
-                        {job.external_link ? (
-                          <a href={job.external_link} target="_blank" rel="noopener noreferrer">
-                            {job.title}
-                          </a>
-                        ) : (
-                          job.title
-                        )}
-                      </td>
-                      <td title={job.summary}>{truncate(job.summary, 50)}</td>
-                      <td title={job.skills}>{truncate(job.skills, 40)}</td>
-                      <td>
-                        {job.match_percent != null && (
-                          <>
-                            <div className="progress-bar">
-                              <div
-                                className="progress-bar-fill"
-                                style={{
-                                  width: `${job.match_percent}%`,
-                                  background: getProgressColor(job.match_percent),
-                                }}
-                              />
-                            </div>
-                            <span style={{ fontSize: 12 }}>{job.match_percent}%</span>
-                          </>
-                        )}
-                      </td>
-                      <td>{job.interview_status || '-'}</td>
-                      <td>
-                        <span className={getBadgeClass(job.apply_status)}>
-                          {job.apply_status || 'none'}
-                        </span>
-                      </td>
-                      <td>
-                        {job.applied_at
-                          ? new Date(job.applied_at).toLocaleDateString()
-                          : '-'}
+                </thead>
+                <tbody>
+                  {paged.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
+                        No jobs found
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    paged.map((job) => (
+                      <tr key={job.id} style={selected.has(job.id) ? { background: 'rgba(108, 99, 255, 0.08)' } : {}}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={selected.has(job.id)}
+                            onChange={() => toggleSelect(job.id)}
+                          />
+                        </td>
+                        <td>
+                          {job.site_url && (
+                            <img
+                              className="site-favicon"
+                              src={`https://www.google.com/s2/favicons?domain=${new URL(job.site_url).hostname}&sz=32`}
+                              alt=""
+                            />
+                          )}
+                          {job.site || '-'}
+                        </td>
+                        <td>
+                          {job.external_link ? (
+                            <a href={job.external_link} target="_blank" rel="noopener noreferrer">
+                              {job.title}
+                            </a>
+                          ) : (
+                            job.title
+                          )}
+                        </td>
+                        <td title={job.summary}>{truncate(job.summary, 50)}</td>
+                        <td title={job.skills}>{truncate(job.skills, 40)}</td>
+                        <td>
+                          {job.match_percent != null && (
+                            <>
+                              <div className="progress-bar">
+                                <div
+                                  className="progress-bar-fill"
+                                  style={{
+                                    width: `${job.match_percent}%`,
+                                    background: getProgressColor(job.match_percent),
+                                  }}
+                                />
+                              </div>
+                              <span style={{ fontSize: 12 }}>{job.match_percent}%</span>
+                            </>
+                          )}
+                        </td>
+                        <td>{job.interview_status || '-'}</td>
+                        <td>
+                          <span className={getBadgeClass(job.apply_status)}>
+                            {job.apply_status || 'none'}
+                          </span>
+                        </td>
+                        <td>
+                          {job.applied_at
+                            ? new Date(job.applied_at).toLocaleDateString()
+                            : '-'}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+
+          {totalPages > 1 && (
+            <div className="pagination">
+              <button
+                className="btn-secondary btn-sm"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+              >
+                Prev
+              </button>
+              <span className="pagination-info">
+                Page {page} of {totalPages} ({sorted.length} jobs)
+              </span>
+              <button
+                className="btn-secondary btn-sm"
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

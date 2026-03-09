@@ -37,6 +37,10 @@ export default function DashboardLayout({ children }) {
               <span>{item.label}</span>
             </Link>
           ))}
+          <a href="/extension.zip" download className="download-link">
+            <span>📥</span>
+            <span>Download Extension</span>
+          </a>
         </nav>
       </aside>
       <div className="main-content">

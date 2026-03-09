@@ -408,6 +408,13 @@ tr:hover td {
   color: var(--accent);
 }
 
+.sidebar-nav .download-link {
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+  font-size: 13px;
+}
+
 .main-content {
   flex: 1;
   display: flex;
@@ -568,4 +575,30 @@ tr:hover td {
   .filters select, .filters input {
     width: 100%;
   }
+}
+
+/* ===== SORTABLE TABLE HEADERS ===== */
+.sortable-th {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.sortable-th:hover {
+  color: var(--primary, #6c63ff);
+}
+
+/* ===== PAGINATION ===== */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 8px 0;
+}
+
+.pagination-info {
+  font-size: 13px;
+  color: var(--text-secondary, #8a8a9a);
 }
