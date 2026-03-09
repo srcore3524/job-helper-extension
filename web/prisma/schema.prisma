@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  password_hash String
+  created_at    DateTime @default(now())
+
+  @@map("users")
+}
+
+model Applicant {
+  id           String   @id @default(uuid())
+  user_id      String
+  name         String
+  title        String?
+  email        String?
+  phone        String?
+  location     String?
+  linkedin_url String?
+  github_url   String?
+  website_url  String?
+  created_at   DateTime @default(now())
+
+  resumes            Resume[]
+  portfolios         Portfolio[]
+  skills             Skill[]
+  training_materials TrainingMaterial[]
+  jobs               Job[]
+
+  @@map("applicants")
+}
+
+model Resume {
+  id           String   @id @default(uuid())
+  applicant_id String
+  content      String   @db.Text
+  uploaded_at  DateTime @default(now())
+
+  applicant Applicant @relation(fields: [applicant_id], references: [id], onDelete: Cascade)
+
+  @@map("resumes")
+}
+
+model Portfolio {
+  id           String   @id @default(uuid())
+  applicant_id String
+  project_name String
+  description  String   @db.Text
+  tech_stack   String?
+  url          String?
+  created_at   DateTime @default(now())
+
+  applicant Applicant @relation(fields: [applicant_id], references: [id], onDelete: Cascade)
+
+  @@map("portfolios")
+}
+
+model Skill {
+  id                String  @id @default(uuid())
+  applicant_id      String
+  name              String
+  category          String?
+  proficiency_level String?
+
+  applicant Applicant @relation(fields: [applicant_id], references: [id], onDelete: Cascade)
+
+  @@map("skills")
+}
+
+model TrainingMaterial {
+  id           String   @id @default(uuid())
+  applicant_id String
+  type         String
+  content      String   @db.Text
+  created_at   DateTime @default(now())
+
+  applicant Applicant @relation(fields: [applicant_id], references: [id], onDelete: Cascade)
+
+  @@map("training_materials")
+}
+
+model Job {
+  id               String    @id @default(uuid())
+  applicant_id     String
+  site             String?
+  site_url         String?
+  title            String
+  summary          String?   @db.Text
+  skills           String?
+  match_percent    Int?
+  location         String?
+  remote_type      String?
+  interview_status String?
+  apply_status     String?
+  external_link    String?
+  applied_at       DateTime?
+
+  applicant Applicant @relation(fields: [applicant_id], references: [id], onDelete: Cascade)
+
+  @@map("jobs")
+}

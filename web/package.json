@@ -1,0 +1,25 @@
+{
+  "name": "job-helper",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "next": "^14.2.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "@prisma/client": "^5.20.0",
+    "@anthropic-ai/sdk": "^0.30.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "pdf-parse": "^1.1.1",
+    "next-cookies": "^2.0.3"
+  },
+  "devDependencies": {
+    "prisma": "^5.20.0"
+  }
+}
