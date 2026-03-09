@@ -37,6 +37,7 @@ export default function JobsPage() {
   const [selected, setSelected] = useState(new Set());
   const [deleting, setDeleting] = useState(false);
   const [search, setSearch] = useState('');
+  const [detailJob, setDetailJob] = useState(null);
   const [sortBy, setSortBy] = useState('applied_at');
   const [sortDir, setSortDir] = useState('desc');
   const [page, setPage] = useState(1);
@@ -81,9 +82,9 @@ export default function JobsPage() {
     arr.sort((a, b) => {
       let valA, valB;
       switch (sortBy) {
-        case 'title':
-          valA = (a.title || '').toLowerCase();
-          valB = (b.title || '').toLowerCase();
+        case 'site':
+          valA = (a.site || '').toLowerCase();
+          valB = (b.site || '').toLowerCase();
           return sortDir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
         case 'match_percent':
           valA = a.match_percent ?? -1;
@@ -118,7 +119,7 @@ export default function JobsPage() {
       setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
     } else {
       setSortBy(col);
-      setSortDir(col === 'title' || col === 'apply_status' ? 'asc' : 'desc');
+      setSortDir(col === 'site' || col === 'apply_status' ? 'asc' : 'desc');
     }
   }
 
@@ -242,10 +243,10 @@ export default function JobsPage() {
                         onChange={toggleAll}
                       />
                     </th>
-                    <th>Site</th>
-                    <th className="sortable-th" onClick={() => handleSort('title')}>
-                      Title{sortIcon('title')}
+                    <th className="sortable-th" onClick={() => handleSort('site')}>
+                      Site{sortIcon('site')}
                     </th>
+                    <th>Title</th>
                     <th>Summary</th>
                     <th>Skills</th>
                     <th className="sortable-th" onClick={() => handleSort('match_percent')}>
@@ -269,8 +270,13 @@ export default function JobsPage() {
                     </tr>
                   ) : (
                     paged.map((job) => (
-                      <tr key={job.id} style={selected.has(job.id) ? { background: 'rgba(108, 99, 255, 0.08)' } : {}}>
-                        <td>
+                      <tr
+                        key={job.id}
+                        className="clickable-row"
+                        style={selected.has(job.id) ? { background: 'rgba(108, 99, 255, 0.08)' } : {}}
+                        onClick={() => setDetailJob(job)}
+                      >
+                        <td onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             checked={selected.has(job.id)}
@@ -355,6 +361,95 @@ export default function JobsPage() {
             </div>
           )}
         </>
+      )}
+
+      {detailJob && (
+        <div className="modal-overlay" onClick={() => setDetailJob(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 600 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+              <div>
+                <h2 style={{ margin: 0 }}>{detailJob.title}</h2>
+                {detailJob.company && (
+                  <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', fontSize: 14 }}>{detailJob.company}</p>
+                )}
+              </div>
+              <span className={getBadgeClass(detailJob.apply_status)} style={{ flexShrink: 0 }}>
+                {detailJob.apply_status || 'none'}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 16, fontSize: 13 }}>
+              {detailJob.site && (
+                <div><strong>Site:</strong> {detailJob.site}</div>
+              )}
+              {detailJob.location && (
+                <div><strong>Location:</strong> {detailJob.location}</div>
+              )}
+              {detailJob.remote_type && (
+                <div><strong>Type:</strong> {detailJob.remote_type}</div>
+              )}
+              {detailJob.match_percent != null && (
+                <div><strong>Match:</strong> {detailJob.match_percent}%</div>
+              )}
+              {detailJob.applied_at && (
+                <div><strong>Applied:</strong> {new Date(detailJob.applied_at).toLocaleDateString()}</div>
+              )}
+            </div>
+
+            {detailJob.summary && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>Summary</div>
+                <p style={{ fontSize: 14, lineHeight: 1.6, margin: 0 }}>{detailJob.summary}</p>
+              </div>
+            )}
+
+            {detailJob.skills && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>Skills</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {detailJob.skills.split(',').map((s, i) => (
+                    <span key={i} style={{
+                      padding: '3px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600,
+                      background: 'var(--accent-light, rgba(108,99,255,0.1))', color: 'var(--accent, #6c63ff)',
+                    }}>
+                      {s.trim()}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {detailJob.description && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>Description</div>
+                <pre style={{
+                  whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 13, lineHeight: 1.6,
+                  background: 'var(--bg-tertiary)', padding: 14, borderRadius: 'var(--radius)',
+                  maxHeight: 200, overflow: 'auto', margin: 0,
+                }}>
+                  {detailJob.description}
+                </pre>
+              </div>
+            )}
+
+            <div className="modal-actions">
+              {detailJob.external_link && (
+                <a
+                  href={detailJob.external_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-primary"
+                  style={{ textDecoration: 'none', textAlign: 'center' }}
+                >
+                  View Job Post
+                </a>
+              )}
+              <button className="btn-secondary" onClick={() => setDetailJob(null)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

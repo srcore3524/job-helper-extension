@@ -386,7 +386,12 @@
           site: currentJobData?.site || '',
           status: status,
           matchScore: currentAnalysis.matchScore || currentAnalysis.match || 0,
-          description: currentJobData?.description?.substring(0, 2000) || ''
+          description: currentJobData?.description?.substring(0, 2000) || '',
+          summary: currentAnalysis.summary || '',
+          skills: [...(currentAnalysis.matchedSkills || []), ...(currentAnalysis.missingSkills || [])].join(', '),
+          location: currentAnalysis.location || '',
+          remoteType: currentAnalysis.remoteType || '',
+          externalLink: currentJobData?.url || '',
         };
 
         const result = await apiCall('/api/jobs', 'POST', body);
