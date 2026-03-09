@@ -140,27 +140,29 @@
   }
 
   fab.addEventListener('click', () => {
+    if (!chrome.runtime?.id) {
+      window.location.reload();
+      return;
+    }
+
     const description = extractDescription();
     if (!description) {
       alert('Could not extract job description from this page.');
       return;
     }
 
-    try {
-      chrome.runtime.sendMessage({
-        type: 'JOB_DATA_EXTRACTED',
-        payload: {
-          description,
-          url: window.location.href,
-          site: siteName,
-          jobTitle: extractJobTitle(),
-          companyName: extractCompanyName()
-        }
-      });
-    } catch (e) {
-      alert('Extension context lost. Please reload the page.');
-      return;
-    }
+    chrome.runtime.sendMessage({
+      type: 'JOB_DATA_EXTRACTED',
+      payload: {
+        description,
+        url: window.location.href,
+        site: siteName,
+        jobTitle: extractJobTitle(),
+        companyName: extractCompanyName()
+      }
+    }).catch(() => {
+      window.location.reload();
+    });
 
     fab.style.animation = 'none';
     fab.style.background = 'linear-gradient(135deg, #27ae60, #0f3460)';

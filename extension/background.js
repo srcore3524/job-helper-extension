@@ -67,14 +67,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === 'JOB_DATA_EXTRACTED') {
-    // Forward extracted job data to the side panel
+    // Always store the data so the side panel can pick it up
+    chrome.storage.local.set({ pendingJobData: message.payload });
+    // Also try to forward directly to the side panel
     chrome.runtime.sendMessage({
       type: 'JOB_DATA_FOR_PANEL',
       payload: message.payload
-    }).catch(() => {
-      // Side panel might not be open yet; store for later
-      chrome.storage.local.set({ pendingJobData: message.payload });
-    });
+    }).catch(() => {});
     sendResponse({ success: true });
     return true;
   }

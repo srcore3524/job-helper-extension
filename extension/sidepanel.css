@@ -188,59 +188,35 @@ body {
 }
 
 /* ===== STATUS BAR ===== */
-.status-bar {
+.job-title-row {
   display: flex;
-  gap: 4px;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+  justify-content: space-between;
 }
 
-.status-btn {
-  padding: 5px 10px;
+.job-title-row .job-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.status-select {
+  padding: 4px 8px;
   border: 1px solid #2a2a4a;
-  border-radius: 20px;
+  border-radius: 6px;
   background: #16213e;
-  color: #8a8a9a;
+  color: #c0c0d0;
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
+  outline: none;
+  transition: border-color 0.2s;
+  flex-shrink: 0;
 }
 
-.status-btn:hover {
-  border-color: #4a4a6a;
-  color: #c0c0d0;
-}
-
-.status-btn.active[data-status="not_applied"] {
-  background: #3a3a5a;
-  color: #c0c0d0;
-  border-color: #5a5a7a;
-}
-
-.status-btn.active[data-status="applied"] {
-  background: rgba(52, 152, 219, 0.2);
-  color: #3498db;
-  border-color: #3498db;
-}
-
-.status-btn.active[data-status="interview"] {
-  background: rgba(241, 196, 15, 0.2);
-  color: #f1c40f;
-  border-color: #f1c40f;
-}
-
-.status-btn.active[data-status="rejected"] {
-  background: rgba(233, 69, 96, 0.2);
-  color: #e94560;
-  border-color: #e94560;
-}
-
-.status-btn.active[data-status="offer"] {
-  background: rgba(46, 204, 113, 0.2);
-  color: #2ecc71;
-  border-color: #2ecc71;
+.status-select:hover,
+.status-select:focus {
+  border-color: #6c63ff;
 }
 
 /* ===== INFO CARDS ROW ===== */
@@ -272,6 +248,12 @@ body {
   font-weight: 600;
   color: #c0c0d0;
   line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
 }
 
 .info-card.remote-yes { border-color: #2ecc71; }
@@ -358,6 +340,26 @@ body {
   background: rgba(233, 69, 96, 0.15);
   color: #e94560;
   border: 1px solid rgba(233, 69, 96, 0.25);
+}
+
+.skill-badge.relevant {
+  background: rgba(52, 152, 219, 0.15);
+  color: #3498db;
+  border: 1px solid rgba(52, 152, 219, 0.25);
+}
+
+.skills-group-label {
+  width: 100%;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #6a6a8a;
+  margin-top: 6px;
+  letter-spacing: 0.5px;
+}
+
+.skills-group-label:first-child {
+  margin-top: 0;
 }
 
 /* ===== LINKS LIST ===== */
@@ -486,6 +488,28 @@ body {
 
 .btn-copy.copied {
   color: #2ecc71;
+}
+
+/* ===== REFINE ROW ===== */
+.refine-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.refine-input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid #2a2a4a;
+  border-radius: 6px;
+  background: #16213e;
+  color: #c0c0d0;
+  font-size: 12px;
+  outline: none;
+}
+
+.refine-input:focus {
+  border-color: #6c63ff;
 }
 
 /* ===== LOADING OVERLAY ===== */

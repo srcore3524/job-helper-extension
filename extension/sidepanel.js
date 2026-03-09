@@ -30,7 +30,7 @@
   const jobResults = $('#jobResults');
   const jobTitle = $('#jobTitle');
   const jobCompany = $('#jobCompany');
-  const statusBtns = $$('.status-btn');
+  const statusSelect = $('#statusSelect');
   const jobLocation = $('#jobLocation');
   const jobRemote = $('#jobRemote');
   const remoteCard = $('#remoteCard');
@@ -51,10 +51,6 @@
   const upworkInput = $('#upworkInput');
   const upworkAnalyzeBtn = $('#upworkAnalyzeBtn');
   const upworkResults = $('#upworkResults');
-  const upworkLocation = $('#upworkLocation');
-  const upworkRemote = $('#upworkRemote');
-  const upworkRemoteCard = $('#upworkRemoteCard');
-  const upworkHiring = $('#upworkHiring');
   const upworkMatchBar = $('#upworkMatchBar');
   const upworkMatchPercent = $('#upworkMatchPercent');
   const upworkSummary = $('#upworkSummary');
@@ -66,6 +62,14 @@
   const upworkAnswerArea = $('#upworkAnswerArea');
   const upworkAnswerText = $('#upworkAnswerText');
   const upworkCopyBtn = $('#upworkCopyBtn');
+  const upworkBidRefineInput = $('#upworkBidRefineInput');
+  const upworkBidRefineBtn = $('#upworkBidRefineBtn');
+  const upworkAnswerRefineRow = $('#upworkAnswerRefineRow');
+  const upworkAnswerRefineInput = $('#upworkAnswerRefineInput');
+  const upworkAnswerRefineBtn = $('#upworkAnswerRefineBtn');
+  const jobAnswerRefineRow = $('#jobAnswerRefineRow');
+  const jobAnswerRefineInput = $('#jobAnswerRefineInput');
+  const jobAnswerRefineBtn = $('#jobAnswerRefineBtn');
 
   // Loading
   const loadingOverlay = $('#loadingOverlay');
@@ -263,18 +267,44 @@
     skillsGrid.innerHTML = '';
     const matched = analysis.matchedSkills || analysis.skills?.matched || [];
     const missing = analysis.missingSkills || analysis.skills?.missing || [];
-    matched.forEach((s) => {
-      const badge = document.createElement('span');
-      badge.className = 'skill-badge matched';
-      badge.textContent = s;
-      skillsGrid.appendChild(badge);
-    });
-    missing.forEach((s) => {
-      const badge = document.createElement('span');
-      badge.className = 'skill-badge missing';
-      badge.textContent = s;
-      skillsGrid.appendChild(badge);
-    });
+    const relevant = analysis.relevantSkills || [];
+
+    if (matched.length > 0) {
+      const label = document.createElement('div');
+      label.className = 'skills-group-label';
+      label.textContent = 'Matched';
+      skillsGrid.appendChild(label);
+      matched.forEach((s) => {
+        const badge = document.createElement('span');
+        badge.className = 'skill-badge matched';
+        badge.textContent = s;
+        skillsGrid.appendChild(badge);
+      });
+    }
+    if (missing.length > 0) {
+      const label = document.createElement('div');
+      label.className = 'skills-group-label';
+      label.textContent = 'Missing';
+      skillsGrid.appendChild(label);
+      missing.forEach((s) => {
+        const badge = document.createElement('span');
+        badge.className = 'skill-badge missing';
+        badge.textContent = s;
+        skillsGrid.appendChild(badge);
+      });
+    }
+    if (relevant.length > 0) {
+      const label = document.createElement('div');
+      label.className = 'skills-group-label';
+      label.textContent = 'Your Relevant Skills';
+      skillsGrid.appendChild(label);
+      relevant.forEach((s) => {
+        const badge = document.createElement('span');
+        badge.className = 'skill-badge relevant';
+        badge.textContent = s;
+        skillsGrid.appendChild(badge);
+      });
+    }
 
     // External links
     const links = analysis.applyLinks || analysis.externalLinks || [];
@@ -297,11 +327,8 @@
       linksSection.style.display = 'none';
     }
 
-    // Reset status buttons
-    statusBtns.forEach((b) => b.classList.remove('active'));
-    const statusVal = analysis.status || 'not_applied';
-    const activeStatusBtn = document.querySelector(`.status-btn[data-status="${statusVal}"]`);
-    if (activeStatusBtn) activeStatusBtn.classList.add('active');
+    // Set status dropdown
+    statusSelect.value = analysis.status || 'not_applied';
   }
 
   // --------------------------------------------------
@@ -309,20 +336,6 @@
   // --------------------------------------------------
   function displayUpworkResults(analysis) {
     upworkResults.style.display = 'block';
-
-    // Location
-    upworkLocation.textContent = analysis.location || 'Not specified';
-
-    // Remote
-    const remote = (analysis.remoteType || analysis.workType || '').toLowerCase();
-    upworkRemote.textContent = analysis.remoteType || analysis.workType || 'Remote';
-    upworkRemoteCard.className = 'info-card';
-    if (remote.includes('remote') || !remote) upworkRemoteCard.classList.add('remote-yes');
-    else if (remote.includes('hybrid')) upworkRemoteCard.classList.add('remote-hybrid');
-    else upworkRemoteCard.classList.add('remote-no');
-
-    // Hiring signal
-    upworkHiring.textContent = analysis.hiringSignal || analysis.urgency || 'Unclear';
 
     // Match score
     const score = parseInt(analysis.matchScore || analysis.match || 0, 10);
@@ -360,36 +373,29 @@
   // --------------------------------------------------
   // Status buttons (Job tab)
   // --------------------------------------------------
-  statusBtns.forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const status = btn.getAttribute('data-status');
+  statusSelect.addEventListener('change', async () => {
+    const status = statusSelect.value;
 
-      // Update UI
-      statusBtns.forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
+    if (currentAnalysis) {
+      try {
+        const body = {
+          applicantId: applicantSelect.value,
+          jobTitle: currentAnalysis.jobTitle || currentJobData?.jobTitle || '',
+          company: currentAnalysis.company || currentJobData?.companyName || '',
+          url: currentJobData?.url || '',
+          site: currentJobData?.site || '',
+          status: status,
+          matchScore: currentAnalysis.matchScore || currentAnalysis.match || 0,
+          description: currentJobData?.description?.substring(0, 2000) || ''
+        };
 
-      // Save to DB
-      if (currentAnalysis) {
-        try {
-          const body = {
-            applicantId: applicantSelect.value,
-            jobTitle: currentAnalysis.jobTitle || currentJobData?.jobTitle || '',
-            company: currentAnalysis.company || currentJobData?.companyName || '',
-            url: currentJobData?.url || '',
-            site: currentJobData?.site || '',
-            status: status,
-            matchScore: currentAnalysis.matchScore || currentAnalysis.match || 0,
-            description: currentJobData?.description?.substring(0, 2000) || ''
-          };
-
-          const result = await apiCall('/api/jobs', 'POST', body);
-          currentJobId = result._id || result.id || currentJobId;
-          showToast('Status saved', 'success');
-        } catch (err) {
-          showToast('Failed to save status: ' + err.message, 'error');
-        }
+        const result = await apiCall('/api/jobs', 'POST', body);
+        currentJobId = result._id || result.id || currentJobId;
+        showToast('Status saved', 'success');
+      } catch (err) {
+        showToast('Failed to save status: ' + err.message, 'error');
       }
-    });
+    }
   });
 
   // --------------------------------------------------
@@ -414,8 +420,10 @@
       };
 
       const result = await apiCall('/api/generate-answer', 'POST', body);
-      jobAnswerText.textContent = result.answer || result.response || result.text || 'No answer generated.';
+      const answerText = result.answers?.map(a => a.answer).join('\n\n') || result.answer || result.response || result.text || 'No answer generated.';
+      jobAnswerText.textContent = answerText;
       jobAnswerArea.style.display = 'block';
+      jobAnswerRefineRow.style.display = 'flex';
     } catch (err) {
       showToast('Failed to generate answer: ' + err.message, 'error');
     } finally {
@@ -450,8 +458,10 @@
       };
 
       const result = await apiCall('/api/generate-answer', 'POST', body);
-      upworkAnswerText.textContent = result.answer || result.response || result.text || 'No answer generated.';
+      const answerText = result.answers?.map(a => a.answer).join('\n\n') || result.answer || result.response || result.text || 'No answer generated.';
+      upworkAnswerText.textContent = answerText;
       upworkAnswerArea.style.display = 'block';
+      upworkAnswerRefineRow.style.display = 'flex';
     } catch (err) {
       showToast('Failed to generate answer: ' + err.message, 'error');
     } finally {
@@ -466,6 +476,51 @@
 
   upworkBidCopy.addEventListener('click', () => {
     copyToClipboard(upworkBidText.textContent, upworkBidCopy);
+  });
+
+  // --------------------------------------------------
+  // Refine helper
+  // --------------------------------------------------
+  async function refineText(currentText, instruction, type, targetEl, btn) {
+    if (!instruction.trim()) {
+      showToast('Enter refinement instructions', 'error');
+      return;
+    }
+    const origLabel = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Refining...';
+    try {
+      const result = await apiCall('/api/refine', 'POST', {
+        currentText,
+        instruction: instruction.trim(),
+        type,
+      });
+      targetEl.textContent = result.text || currentText;
+      showToast('Refined', 'success');
+    } catch (err) {
+      showToast('Refine failed: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = origLabel;
+    }
+  }
+
+  // Refine: Upwork bid
+  upworkBidRefineBtn.addEventListener('click', () => {
+    refineText(upworkBidText.textContent, upworkBidRefineInput.value, 'bid', upworkBidText, upworkBidRefineBtn);
+    upworkBidRefineInput.value = '';
+  });
+
+  // Refine: Upwork Q&A
+  upworkAnswerRefineBtn.addEventListener('click', () => {
+    refineText(upworkAnswerText.textContent, upworkAnswerRefineInput.value, 'answer', upworkAnswerText, upworkAnswerRefineBtn);
+    upworkAnswerRefineInput.value = '';
+  });
+
+  // Refine: Job Q&A
+  jobAnswerRefineBtn.addEventListener('click', () => {
+    refineText(jobAnswerText.textContent, jobAnswerRefineInput.value, 'answer', jobAnswerText, jobAnswerRefineBtn);
+    jobAnswerRefineInput.value = '';
   });
 
   // --------------------------------------------------
@@ -539,9 +594,18 @@
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'JOB_DATA_FOR_PANEL' && message.payload) {
       analyzeJob(message.payload);
+      chrome.storage.local.remove('pendingJobData');
       sendResponse({ received: true });
     }
     return true;
+  });
+
+  // Also listen for storage changes (backup if direct message missed)
+  chrome.storage.onChanged.addListener((changes) => {
+    if (changes.pendingJobData && changes.pendingJobData.newValue) {
+      analyzeJob(changes.pendingJobData.newValue);
+      chrome.storage.local.remove('pendingJobData');
+    }
   });
 
   // --------------------------------------------------

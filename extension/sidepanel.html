@@ -51,19 +51,29 @@
 
     <!-- Job results (hidden until analysis) -->
     <div id="jobResults" style="display:none;">
-      <!-- Job title & company -->
+      <!-- Job title + status row, then company -->
       <div class="job-header-card">
-        <h2 id="jobTitle" class="job-title">-</h2>
+        <div class="job-title-row">
+          <h2 id="jobTitle" class="job-title">-</h2>
+          <select id="statusSelect" class="status-select">
+            <option value="not_applied">Not Applied</option>
+            <option value="applied">Applied</option>
+            <option value="interview">Interview</option>
+            <option value="rejected">Rejected</option>
+            <option value="offer">Offer</option>
+          </select>
+        </div>
         <p id="jobCompany" class="job-company">-</p>
       </div>
 
-      <!-- Apply status -->
-      <div class="status-bar">
-        <button class="status-btn active" data-status="not_applied">Not Applied</button>
-        <button class="status-btn" data-status="applied">Applied</button>
-        <button class="status-btn" data-status="interview">Interview</button>
-        <button class="status-btn" data-status="rejected">Rejected</button>
-        <button class="status-btn" data-status="offer">Offer</button>
+      <!-- Match score -->
+      <div class="section-card">
+        <div class="section-label">Match Score</div>
+        <div class="progress-bar-container">
+          <div id="matchBar" class="progress-bar" style="width:0%;">
+            <span id="matchPercent" class="progress-text">0%</span>
+          </div>
+        </div>
       </div>
 
       <!-- Quick info cards -->
@@ -79,16 +89,6 @@
         <div class="info-card">
           <span class="info-icon">&#128293;</span>
           <span id="jobHiring" class="info-value">-</span>
-        </div>
-      </div>
-
-      <!-- Match score -->
-      <div class="section-card">
-        <div class="section-label">Match Score</div>
-        <div class="progress-bar-container">
-          <div id="matchBar" class="progress-bar" style="width:0%;">
-            <span id="matchPercent" class="progress-text">0%</span>
-          </div>
         </div>
       </div>
 
@@ -122,6 +122,10 @@
             Copy
           </button>
         </div>
+        <div id="jobAnswerRefineRow" class="refine-row" style="display:none;">
+          <input id="jobAnswerRefineInput" class="refine-input" placeholder="e.g. mention my React experience..." />
+          <button id="jobAnswerRefineBtn" class="btn-secondary btn-sm">Refine</button>
+        </div>
       </div>
     </div>
   </div>
@@ -137,21 +141,6 @@
 
     <!-- Upwork results (hidden until analysis) -->
     <div id="upworkResults" style="display:none;">
-      <!-- Quick info cards -->
-      <div class="info-cards-row">
-        <div class="info-card">
-          <span class="info-icon">&#127758;</span>
-          <span id="upworkLocation" class="info-value">-</span>
-        </div>
-        <div class="info-card" id="upworkRemoteCard">
-          <span class="info-icon">&#128187;</span>
-          <span id="upworkRemote" class="info-value">-</span>
-        </div>
-        <div class="info-card">
-          <span class="info-icon">&#128293;</span>
-          <span id="upworkHiring" class="info-value">-</span>
-        </div>
-      </div>
 
       <!-- Match score -->
       <div class="section-card">
@@ -185,6 +174,10 @@
             Copy
           </button>
         </div>
+        <div class="refine-row">
+          <input id="upworkBidRefineInput" class="refine-input" placeholder="e.g. make it shorter, mention Laravel experience..." />
+          <button id="upworkBidRefineBtn" class="btn-secondary btn-sm">Refine</button>
+        </div>
       </div>
 
       <!-- Q&A -->
@@ -198,6 +191,10 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
             Copy
           </button>
+        </div>
+        <div id="upworkAnswerRefineRow" class="refine-row" style="display:none;">
+          <input id="upworkAnswerRefineInput" class="refine-input" placeholder="e.g. be more specific about..." />
+          <button id="upworkAnswerRefineBtn" class="btn-secondary btn-sm">Refine</button>
         </div>
       </div>
     </div>

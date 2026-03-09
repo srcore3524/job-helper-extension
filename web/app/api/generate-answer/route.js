@@ -88,9 +88,16 @@ export async function POST(request) {
         ? `\n\nTRAINING MATERIALS (use these as style and content guidance):\n${trainingMaterials.map((t) => t.content).join('\n---\n')}`
         : '';
 
-    const systemPrompt = `You are an expert job application assistant. Using the applicant's profile, resume, portfolio, skills, and training materials, generate professional, tailored answers to the provided questions.
+    const systemPrompt = `You are an expert job application assistant. Using the applicant's profile, resume, portfolio, skills, and training materials, generate tailored answers to the provided questions.
 
-The training materials show the applicant's preferred writing style and approach - mirror that style in your answers.
+CRITICAL STYLE RULES:
+- Write in a conversational, human tone. It must NOT sound like AI wrote it.
+- Never use hyphens or dashes in sentences. Use commas, periods, or restructure instead.
+- Keep it simple and direct. No buzzwords, no flashy language.
+- Be specific to the applicant's real experience and the job description.
+- The company should feel like they need this person, but don't oversell.
+- Follow the training materials closely for style, tone, and structure guidance.
+- Keep answers concise: 3-5 sentences for short questions, a short paragraph for longer ones.
 
 Return a JSON object with this structure:
 {
@@ -102,11 +109,6 @@ Return a JSON object with this structure:
   ]
 }
 
-Make answers:
-- Professional and conversational
-- Specific to the applicant's actual experience
-- Tailored to the job description if provided
-- Concise but thorough
 Return ONLY valid JSON, no additional text.`;
 
     const userMessage = `APPLICANT PROFILE:

@@ -31,8 +31,36 @@ export async function POST(request) {
     const auth = await getAuthUser(request);
     if (!auth) return unauthorizedResponse();
 
-    const { applicant_id, project_name, description, tech_stack, url } = await request.json();
+    const body = await request.json();
+    const { applicant_id } = body;
 
+    // Bulk: add new or replace all
+    if (body.projects && Array.isArray(body.projects)) {
+      if (!applicant_id) {
+        return NextResponse.json({ error: 'applicant_id is required' }, { status: 400 });
+      }
+      if (body.replace) {
+        await prisma.portfolio.deleteMany({ where: { applicant_id } });
+      }
+      const created = [];
+      for (const p of body.projects) {
+        if (!p.project_name || !p.description) continue;
+        const portfolio = await prisma.portfolio.create({
+          data: {
+            applicant_id,
+            project_name: p.project_name,
+            description: p.description,
+            tech_stack: p.tech_stack || null,
+            url: p.url || null,
+          },
+        });
+        created.push(portfolio);
+      }
+      return NextResponse.json({ portfolios: created }, { status: 201 });
+    }
+
+    // Single create
+    const { project_name, description, tech_stack, url } = body;
     if (!applicant_id || !project_name || !description) {
       return NextResponse.json({ error: 'applicant_id, project_name, and description are required' }, { status: 400 });
     }

@@ -83,6 +83,16 @@ export async function POST(request) {
         ? `\n\nTRAINING MATERIALS:\n${trainingMaterials.map((t) => t.content).join('\n---\n')}`
         : '';
 
+    const isUpwork = trainingType === 'upwork';
+
+    const bidField = isUpwork
+      ? `\n  "bid_draft": "A full proposal/bid text following the training materials style and rules exactly. Write as the applicant in first person. This must be ready to paste into Upwork as is.",`
+      : '';
+
+    const bidInstruction = isUpwork
+      ? `\n\nFor the bid_draft: Follow the training materials EXACTLY for tone, structure, and rules. Write as the applicant. The bid must sound human and conversational, not like AI. Each sentence on its own line. No hyphens, no dashes, no bullet lists in the bid text.`
+      : '';
+
     const systemPrompt = `You are a job analysis assistant. Analyze the job description against the applicant's profile and return a JSON object with the following structure:
 {
   "title": "job title extracted from description",
@@ -90,15 +100,16 @@ export async function POST(request) {
   "location": "job location",
   "country": "country",
   "remote_type": "remote/hybrid/onsite/unknown",
-  "is_actually_hiring": true/false,
+  "is_actually_hiring": true/false (boolean),
   "match_percent": 0-100,
-  "summary": "2-3 sentence summary of the role and fit",
+  "summary": "2-3 sentence summary of what the job/role is about (do NOT mention the applicant or fit, only describe the job itself)",
   "required_skills": [{"name": "skill name", "matched": true/false}],
+  "relevant_applicant_skills": ["applicant skills from their profile that are relevant to this job but NOT listed in required_skills, e.g. transferable skills, similar technologies, related experience"],
   "external_links": ["any URLs found in the description"],
-  "hiring_signals": "analysis of whether this is a real active job posting"
+  "hiring_signals": "one or two words ONLY: Active, Likely Hiring, Uncertain, or Likely Stale"${bidField}
 }
 
-Be accurate with match_percent based on how well the applicant's skills, experience, and background match the job requirements.
+Be accurate with match_percent based on how well the applicant's skills, experience, and background match the job requirements.${bidInstruction}
 Return ONLY valid JSON, no additional text.`;
 
     const userMessage = `APPLICANT PROFILE:
@@ -111,7 +122,26 @@ ${job_description}`;
 
     const result = await askClaudeJSON(systemPrompt, userMessage);
 
-    return NextResponse.json(result);
+    // Map to the field names the extension expects
+    const matched = (result.required_skills || []).filter(s => s.matched).map(s => s.name);
+    const missing = (result.required_skills || []).filter(s => !s.matched).map(s => s.name);
+
+    return NextResponse.json({
+      jobTitle: result.title || '',
+      company: result.company || '',
+      location: result.location || '',
+      country: result.country || '',
+      remoteType: result.remote_type || 'unknown',
+      hiringSignal: result.hiring_signals || '',
+      matchScore: result.match_percent || 0,
+      summary: result.summary || '',
+      matchedSkills: matched,
+      missingSkills: missing,
+      relevantSkills: result.relevant_applicant_skills || [],
+      applyLinks: result.external_links || [],
+      bidDraft: result.bid_draft || '',
+      status: 'not_applied',
+    });
   } catch (error) {
     console.error('Analyze error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

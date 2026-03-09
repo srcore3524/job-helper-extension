@@ -17,6 +17,7 @@ export default function PortfolioPage() {
   const [addMode, setAddMode] = useState('manual'); // 'manual' or 'fetch'
   const [fetchUrl, setFetchUrl] = useState('');
   const [fetching, setFetching] = useState(false);
+  const [fetchedProjects, setFetchedProjects] = useState([]);
 
   useEffect(() => {
     fetch('/api/applicants')
@@ -42,6 +43,7 @@ export default function PortfolioPage() {
     setEditing(null);
     setForm(emptyForm);
     setFetchUrl('');
+    setFetchedProjects([]);
     setAddMode('manual');
     setError('');
     setShowModal(true);
@@ -64,6 +66,7 @@ export default function PortfolioPage() {
     if (!fetchUrl.trim()) return;
     setFetching(true);
     setError('');
+    setFetchedProjects([]);
     try {
       const res = await fetch('/api/portfolio/fetch', {
         method: 'POST',
@@ -72,17 +75,36 @@ export default function PortfolioPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Fetch failed');
-      setForm({
-        project_name: data.project_name || '',
-        description: data.description || '',
-        tech_stack: data.tech_stack || '',
-        url: data.url || fetchUrl,
-      });
-      setAddMode('manual'); // switch to manual so user can review/edit
+      const projects = (data.projects || []).filter(p => p.project_name);
+      if (projects.length === 0) throw new Error('No projects found on this page');
+      setFetchedProjects(projects);
     } catch (err) {
       setError(err.message);
     }
     setFetching(false);
+  }
+
+  async function handleSaveFetched(replace) {
+    setSaving(true);
+    setError('');
+    try {
+      const res = await fetch('/api/portfolio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ applicant_id: applicantId, projects: fetchedProjects, replace }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to save projects');
+      }
+      setShowModal(false);
+      const r2 = await fetch(`/api/portfolio?applicant_id=${applicantId}`);
+      const d2 = await r2.json();
+      setItems(d2.portfolios || []);
+    } catch (err) {
+      setError(err.message);
+    }
+    setSaving(false);
   }
 
   async function handleSave(e) {
@@ -238,12 +260,12 @@ export default function PortfolioPage() {
             {addMode === 'fetch' && !editing && (
               <div style={{ marginBottom: 20 }}>
                 <div className="form-group">
-                  <label>Project URL (GitHub, live site, etc.)</label>
+                  <label>Portfolio URL (paste your portfolio site link)</label>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <input
                       value={fetchUrl}
                       onChange={(e) => setFetchUrl(e.target.value)}
-                      placeholder="https://github.com/user/project"
+                      placeholder="https://your-portfolio.com"
                       style={{ flex: 1 }}
                     />
                     <button
@@ -259,42 +281,90 @@ export default function PortfolioPage() {
                 {fetching && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)', fontSize: 13 }}>
                     <div className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
-                    Analyzing page with AI...
+                    Analyzing portfolio for projects...
+                  </div>
+                )}
+                {fetchedProjects.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
+                      Found {fetchedProjects.length} project{fetchedProjects.length > 1 ? 's' : ''}:
+                    </div>
+                    <div style={{ maxHeight: 300, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {fetchedProjects.map((p, i) => (
+                        <div key={i} style={{ background: 'var(--bg-secondary, #1a1a2e)', borderRadius: 8, padding: '10px 14px' }}>
+                          <div style={{ fontWeight: 600, marginBottom: 4 }}>{p.project_name}</div>
+                          <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>{p.description}</div>
+                          {p.tech_stack && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{p.tech_stack}</div>}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
             )}
 
-            <form onSubmit={handleSave}>
-              <div className="form-group">
-                <label>Project Name *</label>
-                <input value={form.project_name} onChange={(e) => setField('project_name', e.target.value)} required />
-              </div>
-              <div className="form-group">
-                <label>Description *</label>
-                <textarea value={form.description} onChange={(e) => setField('description', e.target.value)} required />
-              </div>
-              <div className="form-group">
-                <label>Tech Stack</label>
-                <input
-                  value={form.tech_stack}
-                  onChange={(e) => setField('tech_stack', e.target.value)}
-                  placeholder="React, Node.js, PostgreSQL..."
-                />
-              </div>
-              <div className="form-group">
-                <label>URL</label>
-                <input value={form.url} onChange={(e) => setField('url', e.target.value)} placeholder="https://..." />
-              </div>
+            {(addMode === 'manual' || editing) && (
+              <form onSubmit={handleSave}>
+                <div className="form-group">
+                  <label>Project Name *</label>
+                  <input value={form.project_name} onChange={(e) => setField('project_name', e.target.value)} required />
+                </div>
+                <div className="form-group">
+                  <label>Description *</label>
+                  <textarea value={form.description} onChange={(e) => setField('description', e.target.value)} required />
+                </div>
+                <div className="form-group">
+                  <label>Tech Stack</label>
+                  <input
+                    value={form.tech_stack}
+                    onChange={(e) => setField('tech_stack', e.target.value)}
+                    placeholder="React, Node.js, PostgreSQL..."
+                  />
+                </div>
+                <div className="form-group">
+                  <label>URL</label>
+                  <input value={form.url} onChange={(e) => setField('url', e.target.value)} placeholder="https://..." />
+                </div>
+                <div className="modal-actions">
+                  <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn-primary" disabled={saving}>
+                    {saving ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {addMode === 'fetch' && !editing && (
               <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="btn-primary" disabled={saving}>
-                  {saving ? 'Saving...' : 'Save'}
-                </button>
+                {fetchedProjects.length > 0 && (
+                  <>
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      onClick={() => handleSaveFetched(false)}
+                      disabled={saving}
+                      style={{ whiteSpace: 'nowrap' }}
+                    >
+                      {saving ? 'Saving...' : `Add New (${fetchedProjects.length})`}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-danger"
+                      onClick={() => handleSaveFetched(true)}
+                      disabled={saving}
+                      style={{ whiteSpace: 'nowrap' }}
+                    >
+                      {saving ? 'Saving...' : 'Replace All'}
+                    </button>
+                  </>
+                )}
               </div>
-            </form>
+            )}
           </div>
         </div>
       )}
