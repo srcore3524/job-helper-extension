@@ -261,9 +261,10 @@ export default function JobsPage() {
         <>
           {selected.size > 0 && (
             <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+             <div>
+              <label style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
                 {selected.size} selected
-              </span>
+              </label>
               <select
                 className="btn-secondary btn-sm"
                 value=""
@@ -271,7 +272,7 @@ export default function JobsPage() {
                 onChange={(e) => {
                   if (e.target.value) handleStatusUpdate(e.target.value);
                 }}
-                style={{ cursor: 'pointer' }}
+                style={{ cursor: 'pointer', width:110 }}
               >
                 <option value="" disabled>
                   {updatingStatus ? 'Updating...' : 'Set Status'}
@@ -282,6 +283,7 @@ export default function JobsPage() {
                 <option value="offered">Offered</option>
                 <option value="rejected">Rejected</option>
               </select>
+             </div>
               <button
                 className="btn-danger btn-sm"
                 onClick={handleDeleteSelected}
