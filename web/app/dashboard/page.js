@@ -36,6 +36,7 @@ export default function JobsPage() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(new Set());
   const [deleting, setDeleting] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const [search, setSearch] = useState('');
   const [detailJob, setDetailJob] = useState(null);
   const [sortBy, setSortBy] = useState('applied_at');
@@ -178,6 +179,30 @@ export default function JobsPage() {
     setDeleting(false);
   }
 
+  async function handleStatusUpdate(newStatus) {
+    if (selected.size === 0) return;
+    setUpdatingStatus(true);
+    try {
+      const ids = Array.from(selected);
+      await Promise.all(
+        ids.map((id) =>
+          fetch('/api/jobs', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, apply_status: newStatus }),
+          })
+        )
+      );
+      setJobs((prev) =>
+        prev.map((j) => (selected.has(j.id) ? { ...j, apply_status: newStatus } : j))
+      );
+      setSelected(new Set());
+    } catch {
+      alert('Failed to update status');
+    }
+    setUpdatingStatus(false);
+  }
+
   const pageIds = paged.map((j) => j.id);
   const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
 
@@ -239,6 +264,24 @@ export default function JobsPage() {
               <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
                 {selected.size} selected
               </span>
+              <select
+                className="btn-secondary btn-sm"
+                value=""
+                disabled={updatingStatus}
+                onChange={(e) => {
+                  if (e.target.value) handleStatusUpdate(e.target.value);
+                }}
+                style={{ cursor: 'pointer' }}
+              >
+                <option value="" disabled>
+                  {updatingStatus ? 'Updating...' : 'Set Status'}
+                </option>
+                <option value="applied">Applied</option>
+                <option value="pending">Pending</option>
+                <option value="interview">Interview</option>
+                <option value="offered">Offered</option>
+                <option value="rejected">Rejected</option>
+              </select>
               <button
                 className="btn-danger btn-sm"
                 onClick={handleDeleteSelected}
